@@ -69,7 +69,7 @@ def rag_answer_streamed(user_question):
     for _, row in retrieved_qas.iterrows():
         context += f"Q: {row['clean_question']}\nA: {row['clean_answer']}\n\n"
     final_answer = generate_answer_with_gemini_streamed(user_question, context)
-    return final_answer
+    return final_answer, retrieved_qas
 
 # ----------------- Streamlit UI -----------------
 
@@ -85,4 +85,9 @@ if st.button("🔎 Get Answer"):
         st.warning("Please enter a question.")
     else:
         with st.spinner("Thinking..."):
-            rag_answer_streamed(user_question)
+            final_answer, retrieved_qas = rag_answer_streamed(user_question)
+
+        st.markdown("---")
+        st.markdown("📚 **Related Q&A from our knowledge base:**")
+        for i, row in retrieved_qas.iterrows():
+            st.markdown(f"**Q{i+1}:** {row['clean_question']}\n\n**A{i+1}:** {row['clean_answer']}\n")
