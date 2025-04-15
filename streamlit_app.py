@@ -11,11 +11,9 @@ import time
 
 @st.cache_resource(show_spinner="Loading models and data...")
 def load_rag_pipeline():
-    # Load preprocessed data
     qa_df = pd.read_csv("qa_clean_data.csv")
     all_embeddings = np.load("all_embeddings.npy")
 
-    # Load Sentence-BERT model
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     emb_model = SentenceTransformer('all-MiniLM-L6-v2', device=device)
 
@@ -23,7 +21,6 @@ def load_rag_pipeline():
 
 qa_df, emb_model, all_embeddings = load_rag_pipeline()
 
-# Load Gemini model with API key from st.secrets
 genai.configure(api_key=st.secrets["gemini_key"])
 model = genai.GenerativeModel("models/gemini-1.5-pro")
 
@@ -59,7 +56,7 @@ Answer:"""
         if chunk.text:
             full_response += chunk.text
             output_area.markdown("💡 **Answer:**\n\n" + full_response)
-            time.sleep(0.03)  # typing feel
+            time.sleep(0.03)
 
     return full_response
 
@@ -80,6 +77,10 @@ st.markdown("This is a Retrieval-Augmented Generation (RAG)-powered Q&A system b
 
 user_question = st.text_input("🔍 What's your question?", placeholder="e.g., What is the impact of interest rate hikes on bond prices?")
 
+# Reset related Q&A display
+if "show_context" not in st.session_state:
+    st.session_state.show_context = False
+
 if st.button("🔎 Get Answer"):
     if user_question.strip() == "":
         st.warning("Please enter a question.")
@@ -87,7 +88,17 @@ if st.button("🔎 Get Answer"):
         with st.spinner("Thinking..."):
             final_answer, retrieved_qas = rag_answer_streamed(user_question)
 
+        # Save Q&A to session state
+        st.session_state.retrieved_qas = retrieved_qas
+        st.session_state.show_context = False  # Reset toggle
+
         st.markdown("---")
-        st.markdown("📚 **Related Q&A from our knowledge base:**")
-        for i, row in retrieved_qas.iterrows():
-            st.markdown(f"**Q{i+1}:** {row['clean_question']}\n\n**A{i+1}:** {row['clean_answer']}\n")
+        if st.button("📚 Show related Q&A"):
+            st.session_state.show_context = True
+
+# Render related Q&A if button clicked
+if st.session_state.show_context and "retrieved_qas" in st.session_state:
+    st.markdown("---")
+    st.markdown("📚 **Related Q&A from our knowledge base:**")
+    for i, row in st.session_state.retrieved_qas.iterrows():
+        st.markdown(f"**Q{i+1}:** {row['clean_question']}\n\n**A{i+1}:** {row['clean_answer']}\n")
