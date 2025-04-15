@@ -2,6 +2,5 @@ streamlit
 pandas
 numpy
 sentence-transformers
-scikit-learn
 torch
 google-generativeai
