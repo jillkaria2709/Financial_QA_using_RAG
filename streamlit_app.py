@@ -22,7 +22,7 @@ def load_rag_pipeline():
 qa_df, emb_model, all_embeddings = load_rag_pipeline()
 
 genai.configure(api_key=st.secrets["gemini_key"])
-model = genai.GenerativeModel("models/gemini-1.5-pro")
+model = genai.GenerativeModel("models/gemini-1.0-pro")
 
 # ----------------- RAG Functions -----------------
 
