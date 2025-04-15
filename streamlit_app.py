@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-from datasets import load_dataset
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 import google.generativeai as genai
@@ -9,33 +8,21 @@ import torch
 
 # ----------------- Backend Setup -----------------
 
-@st.cache_resource(show_spinner="Loading models and embeddings...")
+@st.cache_resource(show_spinner="Loading models and data...")
 def load_rag_pipeline():
-    # Load and filter dataset
-    ds = load_dataset("sujet-ai/Sujet-Finance-Instruct-177k")
-    df = pd.DataFrame(ds['train'])
-    qa_df = df[df['task_type'] == 'qa'].reset_index(drop=True)
-
-    # Clean text
-    def clean_text(text):
-        return text.replace("Question:\n", "").strip().lower()
-
-    qa_df['clean_question'] = qa_df['user_prompt'].apply(clean_text)
-    qa_df['clean_answer'] = qa_df['answer'].apply(lambda x: x.strip().lower())
+    # Load preprocessed data
+    qa_df = pd.read_csv("qa_df.csv")
+    all_embeddings = np.load("all_embeddings.npy")
 
     # Load Sentence-BERT model
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     emb_model = SentenceTransformer('all-MiniLM-L6-v2', device=device)
 
-    # Encode all questions
-    all_questions = qa_df['clean_question'].tolist()
-    all_embeddings = emb_model.encode(all_questions, show_progress_bar=True, convert_to_numpy=True, batch_size=64)
-
     return qa_df, emb_model, all_embeddings
 
 qa_df, emb_model, all_embeddings = load_rag_pipeline()
 
-# Secure Gemini key from Streamlit secrets
+# Load Gemini model with API key from st.secrets
 genai.configure(api_key=st.secrets["gemini_key"])
 model = genai.GenerativeModel("models/gemini-1.5-pro")
 
