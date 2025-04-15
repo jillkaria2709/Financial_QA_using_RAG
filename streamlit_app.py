@@ -11,7 +11,7 @@ import torch
 @st.cache_resource(show_spinner="Loading models and data...")
 def load_rag_pipeline():
     # Load preprocessed data
-    qa_df = pd.read_csv("qa_clean_df.csv")
+    qa_df = pd.read_csv("qa_clean_data.csv")
     all_embeddings = np.load("all_embeddings.npy")
 
     # Load Sentence-BERT model
