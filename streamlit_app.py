@@ -60,6 +60,35 @@ Answer:"""
 
     return full_response
 
+def evaluate_answer_with_llm(question, answer):
+    prompt = f"""
+You are an evaluator reviewing how helpful, relevant, and easy-to-understand an AI-generated answer is for a normal person.
+
+Rate the following answer from 1 to 5 (where 5 is excellent) based on:
+- Relevance to the question
+- Clarity (easy to understand for a non-expert)
+- Helpfulness overall
+
+Respond ONLY with a number (1 to 5).
+
+Question: {question}
+
+Answer: {answer}
+
+Score (1 to 5):
+"""
+    response = model.generate_content(prompt)
+    rating = response.text.strip()
+
+    # Convert rating to stars
+    try:
+        score = int(rating[0])
+        score = max(1, min(score, 5))  # clamp to 1–5
+        stars = "⭐" * score
+        return f"{stars} ({score}/5)"
+    except:
+        return "❓ Could not evaluate"
+
 def rag_answer_streamed(user_question):
     retrieved_qas = retrieve_similar_qas(user_question, k=3)
     context = ""
@@ -82,20 +111,35 @@ if "final_answer" not in st.session_state:
     st.session_state.final_answer = None
 if "retrieved_qas" not in st.session_state:
     st.session_state.retrieved_qas = None
+if "answer_rating" not in st.session_state:
+    st.session_state.answer_rating = None
 
-# Handle button
+# Main button logic
 if st.button("🔎 Get Answer"):
     if user_question.strip() == "":
         st.warning("Please enter a question.")
     else:
+        # Clear previous state
+        st.session_state.final_answer = None
+        st.session_state.retrieved_qas = None
+        st.session_state.answer_rating = None
+
         with st.spinner("Thinking..."):
             final_answer, retrieved_qas = rag_answer_streamed(user_question)
 
-        st.session_state.final_answer = "STREAMED"  # just a flag
-        st.session_state.retrieved_qas = retrieved_qas
+        with st.spinner("Evaluating answer quality..."):
+            rating = evaluate_answer_with_llm(user_question, final_answer)
 
-# Don't show answer again — just show related Q&A after answer is streamed
-if st.session_state.final_answer == "STREAMED" and st.session_state.retrieved_qas is not None:
+        # Store all results
+        st.session_state.final_answer = "STREAMED"  # flag only
+        st.session_state.retrieved_qas = retrieved_qas
+        st.session_state.answer_rating = rating
+
+# Display related Q&A and evaluation (but not answer again)
+if st.session_state.final_answer == "STREAMED":
+    st.markdown("🧠 **Answer Quality Evaluation:**")
+    st.markdown(f"{st.session_state.answer_rating}")
+
     st.markdown("---")
     st.markdown("📚 **Related Q&A from our knowledge base:**")
     for i, row in st.session_state.retrieved_qas.iterrows():
