@@ -77,41 +77,33 @@ st.markdown("This is a Retrieval-Augmented Generation (RAG)-powered Q&A system b
 
 user_question = st.text_input("🔍 What's your question?", placeholder="e.g., What is the impact of interest rate hikes on bond prices?")
 
-# Initialize session state
+# Clear session state if not initialized
 if "final_answer" not in st.session_state:
     st.session_state.final_answer = None
 if "retrieved_qas" not in st.session_state:
     st.session_state.retrieved_qas = None
-if "show_context" not in st.session_state:
-    st.session_state.show_context = False
 
-# Handle Get Answer button
+# On click
 if st.button("🔎 Get Answer"):
     if user_question.strip() == "":
         st.warning("Please enter a question.")
     else:
-        # Reset state
+        # Reset
         st.session_state.final_answer = None
         st.session_state.retrieved_qas = None
-        st.session_state.show_context = False
 
         with st.spinner("Thinking..."):
             final_answer, retrieved_qas = rag_answer_streamed(user_question)
 
-        # Save results to session
         st.session_state.final_answer = final_answer
         st.session_state.retrieved_qas = retrieved_qas
 
-# Display stored answer on rerun
-if st.session_state.final_answer and not st.session_state.show_context:
+# Display result after generation
+if st.session_state.final_answer:
+    st.markdown("---")
     st.markdown("💡 **Answer:**")
     st.markdown(st.session_state.final_answer)
 
-    if st.button("📚 Show related Q&A"):
-        st.session_state.show_context = True
-
-# Show related context if toggled
-if st.session_state.show_context and st.session_state.retrieved_qas is not None:
     st.markdown("---")
     st.markdown("📚 **Related Q&A from our knowledge base:**")
     for i, row in st.session_state.retrieved_qas.iterrows():
