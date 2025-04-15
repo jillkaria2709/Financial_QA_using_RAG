@@ -77,33 +77,25 @@ st.markdown("This is a Retrieval-Augmented Generation (RAG)-powered Q&A system b
 
 user_question = st.text_input("🔍 What's your question?", placeholder="e.g., What is the impact of interest rate hikes on bond prices?")
 
-# Clear session state if not initialized
+# Initialize session state
 if "final_answer" not in st.session_state:
     st.session_state.final_answer = None
 if "retrieved_qas" not in st.session_state:
     st.session_state.retrieved_qas = None
 
-# On click
+# Handle button
 if st.button("🔎 Get Answer"):
     if user_question.strip() == "":
         st.warning("Please enter a question.")
     else:
-        # Reset
-        st.session_state.final_answer = None
-        st.session_state.retrieved_qas = None
-
         with st.spinner("Thinking..."):
             final_answer, retrieved_qas = rag_answer_streamed(user_question)
 
-        st.session_state.final_answer = final_answer
+        st.session_state.final_answer = "STREAMED"  # just a flag
         st.session_state.retrieved_qas = retrieved_qas
 
-# Display result after generation
-if st.session_state.final_answer:
-    st.markdown("---")
-    st.markdown("💡 **Answer:**")
-    st.markdown(st.session_state.final_answer)
-
+# Don't show answer again — just show related Q&A after answer is streamed
+if st.session_state.final_answer == "STREAMED" and st.session_state.retrieved_qas is not None:
     st.markdown("---")
     st.markdown("📚 **Related Q&A from our knowledge base:**")
     for i, row in st.session_state.retrieved_qas.iterrows():
